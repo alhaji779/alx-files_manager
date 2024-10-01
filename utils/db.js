@@ -1,4 +1,5 @@
 import mongodb from 'mongodb';
+import ObjectId from 'mongodb';
 
 /**
  * class to manage mongodb instance
@@ -36,6 +37,25 @@ class DBClient {
     async nbFiles() {
         return this.myDb.db().collection('files').countDocuments();
     }
+
+    /**
+     * Retrieves all users collection. 
+     */
+    async allUsersCollection() {
+        return this.myDb.db().collection('users');
+    }
+    
+    /**
+     * Retrieves all `files` collection.
+     * 
+     */
+    async allFilesCollection() {
+        return this.myDb.db().collection('files');
+    }
+
+    convertToObjectId(id) {
+        return new ObjectId(id);
+      }
 }
 
 export const dbClient = new DBClient();
