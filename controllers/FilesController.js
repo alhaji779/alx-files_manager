@@ -5,6 +5,7 @@ import { ObjectId } from 'mongodb';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { error } from 'console';
 
 exports.postUpload = async (req, res) => {
     const token = req.headers['x-token'];
@@ -128,7 +129,7 @@ exports.getIndex = async (req, res) => {
     };
 
     const files = await (await dbClient.allFilesCollection())
-      .find(query)
+      .findOne(query)
       .skip(page * limit)  // Skip based on page
       .limit(limit)  // Limit to 20 files
       .toArray();
@@ -138,4 +139,63 @@ exports.getIndex = async (req, res) => {
     console.error(err);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
+};
+
+
+exports.putPublish = async (req, res) => {
+    const token = req.headers['x-token'];
+    const fileId = req.params.id;
+
+    const user = await redisClient.get(`auth_${token}`);
+    if (!user) {
+        return res.status(401).json({ error: "Unauthorized"});
+    }
+
+    const file = await (await dbClient.allFilesCollection()).findOne({
+        _id: new ObjectId(fileId),
+        userId: new ObjectId(user)
+    });
+    if(!file) {
+        return res.status(404).json({ error: "Not found"});
+    };
+
+    // Update the isPublic field to true
+    await (await dbClient.allFilesCollection()).updateOne(
+        { _id: new ObjectId(fileId) },
+        { $set: { isPublic: true } }
+      );
+  
+    const updatedFile = await (await dbClient.allFilesCollection()).findOne({ _id: new ObjectId(fileId) });
+  
+    return res.status(200).json(updatedFile);
+}
+
+
+
+exports.putUnpublish = async (req, res) => {
+    const token = req.headers['x-token'];
+    const fileId = req.params.id;
+
+    const user = await redisClient.get(`auth_${token}`);
+    if (!user) {
+        return res.status(401).json({ error: "Unauthorized"});
+    }
+
+    const file = await (await dbClient.allFilesCollection()).findOne({
+        _id: new ObjectId(fileId),
+        userId: new ObjectId(user)
+    });
+    if(!file) {
+        return res.status(404).json({ error: "Not found"});
+    };
+
+    // Update the isPublic field to false
+    await (await dbClient.allFilesCollection()).updateOne(
+        { _id: new ObjectId(fileId) },
+        { $set: { isPublic: false } }
+      );
+  
+    const updatedFile = await (await dbClient.allFilesCollection()).findOne({ _id: new ObjectId(fileId) });
+  
+    return res.status(200).json(updatedFile);
 };

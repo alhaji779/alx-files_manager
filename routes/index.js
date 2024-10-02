@@ -3,7 +3,7 @@ const router = express.Router();
 const { getStatus, getStats } = require('../controllers/AppController');
 const { postNew, getMe } = require('../controllers/UsersController');
 const { getConnect, getDisconnect} = require('../controllers/AuthController');
-const { postUpload, getShow, getIndex } = require('../controllers/FilesController')
+const { postUpload, getShow, getIndex, putPublish, putUnpublish } = require('../controllers/FilesController')
 
 
 //get status
@@ -28,11 +28,17 @@ router.get('/users/me', getMe);
 //create files/folder/image
 router.post('/files', postUpload);
 
-//retrive user
+//retrive file
 router.get('/files/:id', getShow);
 
-//retrive user
+//retrive file pagination
 router.get('/files', getIndex);
+
+//publish a file
+router.put('/files/:id/publish', putPublish);
+
+//unpublish a file
+router.put('files/:id/unpublish', putUnpublish);
 
 
 
