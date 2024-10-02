@@ -12,6 +12,7 @@ class DBClient {
         const port = process.env.DB_PORT || 27017;
         const database = process.env.DB_DATABASE || 'files_manager';
         const fullUrl = `mongodb://${host}:${port}/${database}`;
+        console.log(fullUrl);
 
         this.myDb = new mongodb.MongoClient(fullUrl, { useUnifiedTopology: true});
         this.myDb.connect();
