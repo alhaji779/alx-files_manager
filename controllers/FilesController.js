@@ -7,6 +7,9 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import mime from 'mime-types';
 import { error } from 'console';
+import Bull from 'bull';
+
+const fileQueue = new Bull('fileQueue');
 
 exports.postUpload = async (req, res) => {
     const token = req.headers['x-token'];
@@ -70,6 +73,12 @@ exports.postUpload = async (req, res) => {
   
       // Save the file to the database
       const newFile = await (await dbClient.allFilesCollection()).insertOne(fileDocument);
+
+      // If the file is an image, add a job to the fileQueue to generate thumbnails
+      if (type === 'image') {
+        await fileQueue.add({ userId, fileId: newFile.insertedId });
+      }
+
       return res.status(201).json({
         id: newFile.insertedId,
         userId: fileDocument.userId,
@@ -205,6 +214,7 @@ exports.putUnpublish = async (req, res) => {
 exports.getFile = async (req, res) => {
     const token = req.headers['x-token'] || null;
     const fileId = req.params.id;
+    const size = req.query.size;
 
     try {
         // Find the file document by ID
@@ -231,9 +241,15 @@ exports.getFile = async (req, res) => {
             return res.status(404).json({ error: 'Not found' });
           }
         }
+
+        // Determine the correct file path based on the size parameter
+        let filePath = file.localPath;
+        if (size && ['500', '250', '100'].includes(size)) {
+        filePath = `${file.localPath}_${size}`;
+        }
     
         // Check if the file exists locally
-        if (!fs.existsSync(file.localPath)) {
+        if (!fs.existsSync(filePath)) {
           return res.status(404).json({ error: 'Not found' });
         }
     
@@ -248,4 +264,4 @@ exports.getFile = async (req, res) => {
         console.error(err);
         return res.status(500).json({ error: 'Internal Server Error' });
       }
-}
+};
