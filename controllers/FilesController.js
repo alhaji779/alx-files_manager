@@ -83,7 +83,7 @@ exports.postUpload = async (req, res) => {
 
 
 exports.getShow = async (req, res) => {
-    const { id } = req.body;
+    const id  = req.params.id;
     const token = req.headers['x-token'];
 
     const userId = await redisClient.get(`auth_${token}`);
@@ -92,15 +92,50 @@ exports.getShow = async (req, res) => {
             error : "Unauthorized"
         });
     }
-    fileObjectId = new ObjectId(id);
-    userObjectId = new ObjectId(userId);
-    file = await (await dbClient.allFilesCollection()).findOne({
+    const fileObjectId = new ObjectId(id);
+    const userObjectId = new ObjectId(userId);
+    console.log(fileObjectId, userObjectId)
+    const file = await (await dbClient.allFilesCollection()).findOne({
         _id: fileObjectId,
         userId: userObjectId });
+    console.log(file)
     if (!file) {
         return res.status(404).json({error: "Not found"})
     }
-    else {
-        return res.status(200).json({file})
-    }
+    
+    return res.status(200).json(file)
+    
+};
+
+exports.getIndex = async (req, res) => {
+    const token = req.headers['x-token'];
+
+  // Retrieve the user based on the token
+  const userId = await redisClient.get(`auth_${token}`);
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const parentId = req.query.parentId || '0';  // Default parentId to root
+  const page = parseInt(req.query.page, 10) || 0;  // Default to page 0
+  const limit = 20;  // Max 20 items per page
+
+  try {
+    // Query for file documents based on parentId and user ownership
+    const query = {
+      parentId,
+      userId: dbClient.convertToObjectId(userId),
+    };
+
+    const files = await (await dbClient.allFilesCollection())
+      .find(query)
+      .skip(page * limit)  // Skip based on page
+      .limit(limit)  // Limit to 20 files
+      .toArray();
+
+    return res.status(200).json(files);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
 };
