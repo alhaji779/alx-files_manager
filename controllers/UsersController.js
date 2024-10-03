@@ -3,7 +3,9 @@ import sha1 from 'sha1';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
 import { ObjectId } from 'mongodb';
+import Bull from 'bull';
 
+const userQueue = new Bull('userQueue');
 
 exports.postNew = async (req, res) => {
     try {
@@ -28,6 +30,9 @@ exports.postNew = async (req, res) => {
       const newUser = await (await dbClient.allUsersCollection())
         .insertOne({ email, password: sha1(password) });
       const userId = newUser.insertedId.toString();
+
+      // enable a job in the userQueue with the userId
+      userQueue.add({ userId });
   
       res.status(201).json({ id: userId, email  });
     } catch (error) {
